@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco Hero Kids - Petualangan STEAM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-green: #4CAF50;
+            --light-green: #8BC34A;
+            --sky-blue: #00BAFF;
+            --sun-yellow: #FFEB3B;
+            --earth-brown: #795548;
+            --soft-white: #f9f9f9;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            font-family: 'Quicksand', sans-serif;
+            background: var(--sky-blue);
+            color: #333;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1, h2, h3 { font-family: 'Fredoka One', cursive; color: #2E7D32; }
+
+        /* --- UI COMPONENTS --- */
+        .hidden { display: none !important; }
+
+        .screen {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            transition: opacity 0.5s ease;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 10px 0 #ddd, 0 15px 25px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #2E7D32;
+            transition: all 0.2s;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #2E7D32; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #2E7D32; }
+        .btn-yellow { background: var(--sun-yellow); color: #827717; box-shadow: 0 6px 0 #C0CA33; }
+
+        /* --- ASSETS --- */
+        .cloud {
+            position: absolute;
+            background: white;
+            width: 100px;
+            height: 40px;
+            border-radius: 50px;
+            opacity: 0.8;
+            animation: moveClouds 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes moveClouds {
+            from { left: -150px; }
+            to { left: 110%; }
+        }
+
+        /* --- GAME 1: TRASH SORTING --- */
+        .trash-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            min-height: 100px;
+        }
+
+        .trash-item {
+            width: 70px;
+            height: 70px;
+            background: #eee;
+            border-radius: 15px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            touch-action: none;
+        }
+
+        .bins {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .bin {
+            width: 130px;
+            height: 160px;
+            border: 4px solid rgba(0,0,0,0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .bin.organik { background: #8BC34A; color: #2E7D32; }
+        .bin.anorganik { background: #FF7043; color: #BF360C; }
+
+        /* --- GAME 3: GREEN CITY --- */
+        #city-grid {
+            width: 300px;
+            height: 300px;
+            background: #C8E6C9;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            border: 5px solid #81C784;
+            margin: 20px auto;
+        }
+
+        .city-slot {
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        /* --- HUD --- */
+        .hud {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0; pointer-events: none;
+            width: 100%; height: 100%; z-index: 1000;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="hud hidden" id="game-hud">
+        <span>🏆 <span id="hud-xp">0</span> XP</span>
+        <span>⭐ Level <span id="hud-lvl">1</span></span>
+        <button onclick="toggleMusic()" style="border:none; background:none; cursor:pointer;">🎵</button>
+    </div>
+
+    <section id="screen-start" class="screen">
+        <div class="cloud" style="top:10%; animation-delay: 0s;"></div>
+        <div class="cloud" style="top:25%; animation-delay: -5s;"></div>
+        
+        <div class="card">
+            <h1 style="font-size: 3rem; margin-bottom: 0;">Eco Hero Kids</h1>
+            <p>Ayo Jadi Pahlawan Lingkungan!</p>
+            <div id="avatar-selector" style="margin: 20px 0;">
+                <p>Pilih Avatarmu:</p>
+                <span class="avatar-opt" onclick="setAvatar('👦')" style="font-size: 3rem; cursor:pointer; padding:10px;">👦</span>
+                <span class="avatar-opt" onclick="setAvatar('👧')" style="font-size: 3rem; cursor:pointer; padding:10px;">👧</span>
+            </div>
+            <input type="text" id="player-name" placeholder="Masukkan Namamu..." style="padding: 15px; border-radius: 25px; border: 2px solid #ddd; width: 80%; font-size: 1.1rem; text-align: center; margin-bottom: 20px;">
+            <br>
+            <button class="btn" onclick="startGame()">Mulai Petualangan!</button>
+        </div>
+    </section>
+
+    <section id="screen-menu" class="screen hidden">
+        <div class="card">
+            <h2>Halo, <span id="display-name">Hero</span>! 🌟</h2>
+            <p>Pilih Misi STEAM Kamu Hari Ini:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="btn" onclick="loadMisi(1)">🗑️ Memilah Sampah</button>
+                <button class="btn" onclick="loadMisi(2)">🍃 Membuat Kompos</button>
+                <button class="btn" onclick="loadMisi(3)">🏙️ Bangun Kota</button>
+                <button class="btn btn-yellow" onclick="showBadges()">🏅 Galeri Badge</button>
+            </div>
+            <button class="btn-yellow" style="margin-top:20px; padding: 10px 20px;" onclick="showAbout()">💡 Apa itu STEAM?</button>
+        </div>
+    </section>
+
+    <section id="misi-1" class="screen hidden">
+        <div class="card">
+            <h3>Misi 1: Pilah Sampah</h3>
+            <p>Tarik sampah ke kotak yang benar!</p>
+            <div id="m1-timer" style="font-weight: bold; color: red;">Waktu: 60s</div>
+            
+            <div class="trash-container" id="trash-pool">
+                </div>
+
+            <div class="bins">
+                <div class="bin organik" ondragover="allowDrop(event)" ondrop="drop(event, 'organik')">
+                    🍎<br>ORGANIK
+                </div>
+                <div class="bin anorganik" ondragover="allowDrop(event)" ondrop="drop(event, 'anorganik')">
+                    🍾<br>ANORGANIK
+                </div>
+            </div>
+            <div id="m1-feedback" style="margin-top: 15px; height: 20px; font-weight: bold;"></div>
+        </div>
+    </section>
+
+    <section id="misi-2" class="screen hidden">
+        <div class="card">
+            <h3>Misi 2: Pahlawan Kompos</h3>
+            <p>Klik bahan-bahan alami untuk membuat pupuk!</p>
+            <div id="compost-area" style="font-size: 3rem; margin: 20px;">
+                🪣
+            </div>
+            <div id="compost-items" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                </div>
+            <div id="m2-feedback" style="margin-top:15px; min-height: 20px;"></div>
+            <div id="garden-view" style="font-size: 3rem; margin-top: 10px;">🟤</div>
+        </div>
+    </section>
+
+    <section id="misi-3" class="screen hidden">
+        <div class="card">
+            <h3>Misi 3: Arsitek Kota Hijau</h3>
+            <p>Bangun kota dengan menyeret elemen ke peta!</p>
+            <div id="city-stats">Kebahagiaan: 😊 100% | Polusi: ☁️ 0%</div>
+            <div id="city-grid">
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+                <div class="city-slot" ondragover="allowDrop(event)" ondrop="dropCity(event)"></div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px;" id="city-tools">
+                <div class="trash-item" draggable="true" ondragstart="drag(event)" id="t-tree" data-type="good">🌳</div>
+                <div class="trash-item" draggable="true" ondragstart="drag(event)" id="t-solar" data-type="good">☀️</div>
+                <div class="trash-item" draggable="true" ondragstart="drag(event)" id="t-factory" data-type="bad">🏭</div>
+                <div class="trash-item" draggable="true" ondragstart="drag(event)" id="t-house" data-type="good">🏠</div>
+            </div>
+            <div id="ai-comment" style="margin-top: 15px; font-style: italic; color: #555;"></div>
+            <button class="btn hidden" id="btn-finish-city" onclick="showScreen('screen-menu')">Selesai!</button>
+        </div>
+    </section>
+
+    <audio id="snd-correct" src="https://actions.google.com/sounds/v1/cartoon/clink_clanking.ogg"></audio>
+    <audio id="snd-win" src="https://actions.google.com/sounds/v1/human_voices/applause_clapping_and_cheering.ogg"></audio>
+
+    <script>
+        // --- DATA & STATE ---
+        let player = {
+            name: "",
+            avatar: "👦",
+            xp: 0,
+            level: 1,
+            badges: []
+        };
+
+        const trashItems = [
+            { id: 't1', img: '🧴', type: 'anorganik', name: 'Botol Plastik' },
+            { id: 't2', img: '🍂', type: 'organik', name: 'Daun Kering' },
+            { id: 't3', img: '🍌', type: 'organik', name: 'Kulit Pisang' },
+            { id: 't4', img: '🥫', type: 'anorganik', name: 'Kaleng Minum' },
+            { id: 't5', img: '🍖', type: 'organik', name: 'Sisa Makanan' },
+            { id: 't6', img: '🔋', type: 'anorganik', name: 'Baterai' },
+            { id: 't7', img: '🍷', type: 'anorganik', name: 'Botol Kaca' },
+            { id: 't8', img: '🥤', type: 'anorganik', name: 'Sedotan' }
+        ];
+
+        // --- CORE FUNCTIONS ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('player-name').value;
+            if(!nameInput) return alert("Masukkan namamu dulu ya!");
+            player.name = nameInput;
+            document.getElementById('display-name').innerText = player.name;
+            document.getElementById('game-hud').classList.remove('hidden');
+            showScreen('screen-menu');
+            playSnd('snd-correct');
+        }
+
+        function setAvatar(emoji) {
+            player.avatar = emoji;
+            document.querySelectorAll('.avatar-opt').forEach(el => el.style.background = "none");
+            event.target.style.background = "var(--sun-yellow)";
+            event.target.style.borderRadius = "50%";
+        }
+
+        function addXP(amount) {
+            player.xp += amount;
+            document.getElementById('hud-xp').innerText = player.xp;
+            if(player.xp >= player.level * 100) {
+                player.level++;
+                document.getElementById('hud-lvl').innerText = player.level;
+                launchConfetti();
+            }
+        }
+
+        function playSnd(id) {
+            const snd = document.getElementById(id);
+            snd.currentTime = 0;
+            snd.play().catch(e => console.log("Audio enabled after interaction"));
+        }
+
+        // --- MISI 1 LOGIC ---
+        let m1Correct = 0;
+        function loadMisi1() {
+            m1Correct = 0;
+            const container = document.getElementById('trash-pool');
+            container.innerHTML = '';
+            trashItems.sort(() => Math.random() - 0.5).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'trash-item';
+                div.draggable = true;
+                div.id = item.id;
+                div.innerText = item.img;
+                div.dataset.type = item.type;
+                div.ondragstart = drag;
+                container.appendChild(div);
+            });
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function allowDrop(ev) { ev.preventDefault(); }
+
+        function drop(ev, binType) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            const el = document.getElementById(data);
+            const feedback = document.getElementById('m1-feedback');
+
+            if(el.dataset.type === binType) {
+                feedback.innerText = "✅ Hebat! Kamu benar.";
+                feedback.style.color = "green";
+                el.style.visibility = "hidden";
+                addXP(20);
+                m1Correct++;
+                playSnd('snd-correct');
+                if(m1Correct === 8) finishM1();
+            } else {
+                feedback.innerText = "❌ Ups! Coba lagi ya.";
+                feedback.style.color = "red";
+            }
+        }
+
+        function finishM1() {
+            launchConfetti();
+            playSnd('snd-win');
+            alert("Misi 1 Selesai! Kamu Ahli Daur Ulang!");
+            player.badges.push("Ahli Daur Ulang");
+            showScreen('screen-menu');
+        }
+
+        // --- MISI 2 LOGIC ---
+        const compostItems = [
+            { img: '🍂', good: true, msg: 'Daun kering bagus untuk kompos!' },
+            { img: '🍎', good: true, msg: 'Sisa buah nutrisi buat tanah.' },
+            { img: '🔋', good: false, msg: 'Baterai beracun, tidak bisa dikompos!' },
+            { img: '🥫', good: false, msg: 'Kaleng tidak bisa busuk.' },
+            { img: '🪵', good: true, msg: 'Ranting kecil jadi pelengkap.' }
+        ];
+
+        function loadMisi2() {
+            const container = document.getElementById('compost-items');
+            container.innerHTML = '';
+            compostItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'trash-item';
+                btn.style.border = "none";
+                btn.innerText = item.img;
+                btn.onclick = () => {
+                    const fb = document.getElementById('m2-feedback');
+                    if(item.good) {
+                        fb.innerText = "✅ " + item.msg;
+                        document.getElementById('garden-view').innerText += "🌱";
+                        addXP(25);
+                        playSnd('snd-correct');
+                        btn.disabled = true;
+                        btn.style.opacity = "0.3";
+                    } else {
+                        fb.innerText = "❌ " + item.msg;
+                    }
+                    checkM2Win();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function checkM2Win() {
+            const remaining = Array.from(document.querySelectorAll('#compost-items button')).filter(b => !b.disabled);
+            const goods = compostItems.filter(i => i.good).length;
+            const disabled = Array.from(document.querySelectorAll('#compost-items button')).filter(b => b.disabled).length;
+            
+            if(disabled === goods) {
+                setTimeout(() => {
+                    launchConfetti();
+                    playSnd('snd-win');
+                    alert("Hore! Komposmu jadi! Kamu Pahlawan Kompos.");
+                    player.badges.push("Pahlawan Kompos");
+                    showScreen('screen-menu');
+                }, 1000);
+            }
+        }
+
+        // --- MISI 3 LOGIC ---
+        let cityScore = 0;
+        function dropCity(ev) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("text");
+            const tool = document.getElementById(id);
+            const slot = ev.target;
+            
+            if(slot.innerText === "") {
+                slot.innerText = tool.innerText;
+                const type = tool.dataset.type;
+                updateCity(type);
+                playSnd('snd-correct');
+            }
+        }
+
+        function updateCity(type) {
+            const ai = document.getElementById('ai-comment');
+            if(type === 'good') {
+                cityScore += 10;
+                ai.innerText = "AI berkata: 'Wah, udaranya makin segar!'";
+                document.body.style.background = "#81C784";
+            } else {
+                cityScore -= 5;
+                ai.innerText = "AI berkata: 'Hati-hati, asap pabrik bikin batuk.'";
+                document.body.style.background = "#90A4AE";
+            }
+            document.getElementById('btn-finish-city').classList.remove('hidden');
+        }
+
+        // --- NAVIGATION ---
+        function loadMisi(n) {
+            showScreen('misi-' + n);
+            if(n === 1) loadMisi1();
+            if(n === 2) loadMisi2();
+        }
+
+        function showBadges() {
+            alert("Badgemu: " + (player.badges.length > 0 ? player.badges.join(", ") : "Belum ada. Ayo mainkan misi!"));
+        }
+
+        function showAbout() {
+            alert("STEAM adalah Belajar Science, Technology, Engineering, Art, dan Math sambil bermain menjaga bumi!");
+        }
+
+        // --- VISUAL EFFECTS ---
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            let particles = [];
+            for(let i=0; i<100; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    size: Math.random() * 10 + 5,
+                    color: `hsl(${Math.random()*360}, 100%, 50%)`,
+                    v: Math.random() * 5 + 2
+                });
+            }
+            function draw() {
+                ctx.clearRect(0,0,canvas.width, canvas.height);
+                particles.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    p.y += p.v;
+                });
+                if(particles[0].y < canvas.height) requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function toggleMusic() {
+            alert("Musik ceria diputar! (Simulasi: Musik On/Off)");
+        }
+    </script>
+</body>
+</html>
